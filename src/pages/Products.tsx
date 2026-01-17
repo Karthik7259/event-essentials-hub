@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,12 +20,10 @@ const Products = () => {
   const filteredProducts = useMemo(() => {
     let filtered = products;
 
-    // Filter by category
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(p => p.category === selectedCategory);
     }
 
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -35,7 +33,6 @@ const Products = () => {
       );
     }
 
-    // Sort
     switch (sortBy) {
       case 'price-low':
         filtered = [...filtered].sort((a, b) => a.pricePerDay - b.pricePerDay);
@@ -78,43 +75,50 @@ const Products = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       
-      <main className="flex-1">
+      <main className="flex-1 pt-20 lg:pt-24">
         {/* Header */}
-        <section className="gradient-hero py-12 md:py-16">
-          <div className="container mx-auto px-4">
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-primary-foreground mb-2">
-              Our Products
+        <section className="py-16 md:py-24 gradient-luxury relative overflow-hidden">
+          <div className="absolute inset-0">
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-3xl" />
+          </div>
+          <div className="container mx-auto px-6 relative">
+            <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-accent mb-4">
+              <Sparkles className="h-4 w-4" />
+              Collection
+            </span>
+            <h1 className="text-4xl md:text-5xl font-display font-semibold text-primary-foreground mb-4">
+              Premium Inventory
             </h1>
-            <p className="text-primary-foreground/80 max-w-2xl">
-              Browse our complete catalog of event and exhibition infrastructure available for rent
+            <p className="text-lg text-primary-foreground/70 max-w-xl">
+              Discover our curated selection of world-class event infrastructure
             </p>
           </div>
         </section>
 
         {/* Filters */}
-        <section className="py-6 border-b border-border bg-card sticky top-16 md:top-20 z-40">
-          <div className="container mx-auto px-4">
+        <section className="py-6 border-b border-border bg-card/80 backdrop-blur-md sticky top-20 lg:top-24 z-40">
+          <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row gap-4">
               {/* Search */}
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="h-12 pl-11 rounded-xl border-border bg-secondary/50"
                 />
               </div>
 
               {/* Category Filter */}
               <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                <SelectTrigger className="w-full md:w-[200px]">
+                <SelectTrigger className="h-12 w-full md:w-[200px] rounded-xl border-border bg-secondary/50">
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all" className="rounded-lg">All Categories</SelectItem>
                   {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
+                    <SelectItem key={cat.id} value={cat.id} className="rounded-lg">
                       {cat.icon} {cat.name}
                     </SelectItem>
                   ))}
@@ -123,19 +127,24 @@ const Products = () => {
 
               {/* Sort */}
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full md:w-[180px]">
+                <SelectTrigger className="h-12 w-full md:w-[180px] rounded-xl border-border bg-secondary/50">
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Name (A-Z)</SelectItem>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="name" className="rounded-lg">Name (A-Z)</SelectItem>
+                  <SelectItem value="price-low" className="rounded-lg">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high" className="rounded-lg">Price: High to Low</SelectItem>
                 </SelectContent>
               </Select>
 
               {/* Clear Filters */}
               {activeFiltersCount > 0 && (
-                <Button variant="ghost" onClick={clearFilters} className="gap-2">
+                <Button 
+                  variant="ghost" 
+                  onClick={clearFilters} 
+                  className="h-12 gap-2 rounded-xl text-muted-foreground hover:text-foreground"
+                >
                   <X className="h-4 w-4" />
                   Clear ({activeFiltersCount})
                 </Button>
@@ -145,29 +154,35 @@ const Products = () => {
         </section>
 
         {/* Products Grid */}
-        <section className="py-8 md:py-12">
-          <div className="container mx-auto px-4">
+        <section className="py-12 md:py-16">
+          <div className="container mx-auto px-6">
             {filteredProducts.length > 0 ? (
               <>
-                <p className="text-sm text-muted-foreground mb-6">
+                <p className="text-sm text-muted-foreground mb-8">
                   Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                  {filteredProducts.map((product, index) => (
+                    <div 
+                      key={product.id} 
+                      className="animate-fade-in"
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
+                      <ProductCard product={product} />
+                    </div>
                   ))}
                 </div>
               </>
             ) : (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Filter className="h-8 w-8 text-muted-foreground" />
+              <div className="text-center py-24">
+                <div className="w-24 h-24 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Search className="h-10 w-10 text-muted-foreground/50" />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">No products found</h3>
-                <p className="text-muted-foreground mb-4">
+                <h3 className="text-xl font-display font-semibold text-foreground mb-2">No products found</h3>
+                <p className="text-muted-foreground mb-6">
                   Try adjusting your search or filter criteria
                 </p>
-                <Button variant="outline" onClick={clearFilters}>
+                <Button variant="outline" onClick={clearFilters} className="rounded-full px-6">
                   Clear all filters
                 </Button>
               </div>
