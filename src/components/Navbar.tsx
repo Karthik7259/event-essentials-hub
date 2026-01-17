@@ -1,18 +1,25 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Menu, X, User } from 'lucide-react';
-import { useState } from 'react';
+import { ShoppingCart, Menu, X, User, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { cn } from '@/lib/utils';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { totalItems } = useCart();
   const location = useLocation();
 
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const navLinks = [
     { href: '/', label: 'Home' },
-    { href: '/products', label: 'Products' },
+    { href: '/products', label: 'Collection' },
     { href: '/categories', label: 'Categories' },
     { href: '/about', label: 'About' },
     { href: '/contact', label: 'Contact' },
@@ -21,67 +28,93 @@ const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur-md shadow-soft border-b border-border">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20">
+    <nav className={cn(
+      "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
+      scrolled 
+        ? "bg-card/90 backdrop-blur-xl shadow-soft border-b border-border/50" 
+        : "bg-transparent"
+    )}>
+      <div className="container mx-auto px-6">
+        <div className="flex items-center justify-between h-20 lg:h-24">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 gradient-hero rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">E</span>
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="relative">
+              <div className="w-11 h-11 gradient-luxury rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-gold transition-shadow duration-500">
+                <span className="text-primary-foreground font-display text-2xl font-bold">E</span>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-accent rounded-full opacity-80" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="font-display text-xl font-bold text-foreground">EventRent</h1>
-              <p className="text-xs text-muted-foreground -mt-1">Infrastructure Solutions</p>
+              <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight">EventRent</h1>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium">Premium Rentals</p>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="hidden lg:flex items-center gap-1">
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 to={link.href}
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-primary",
-                  isActive(link.href) ? "text-primary" : "text-muted-foreground"
+                  "relative px-5 py-2.5 text-sm font-medium transition-all duration-300 rounded-full",
+                  isActive(link.href) 
+                    ? "text-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {link.label}
+                {isActive(link.href) && (
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-accent rounded-full" />
+                )}
               </Link>
             ))}
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-3">
-            <Link to="/cart" className="relative">
-              <Button variant="ghost" size="icon" className="relative">
-                <ShoppingCart className="h-5 w-5" />
+          <div className="flex items-center gap-2">
+            <Link to="/cart" className="relative group">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative w-11 h-11 rounded-full hover:bg-secondary"
+              >
+                <ShoppingCart className="h-5 w-5 text-foreground/80 group-hover:text-foreground transition-colors" />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-accent-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 gradient-gold text-primary text-[10px] font-bold rounded-full flex items-center justify-center shadow-gold animate-scale-in">
                     {totalItems}
                   </span>
                 )}
               </Button>
             </Link>
 
-            <Link to="/auth" className="hidden sm:block">
-              <Button variant="outline" size="sm" className="gap-2">
-                <User className="h-4 w-4" />
-                Login
-              </Button>
-            </Link>
+            <div className="hidden md:flex items-center gap-2">
+              <Link to="/auth">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-2 rounded-full px-5 text-sm font-medium hover:bg-secondary"
+                >
+                  <User className="h-4 w-4" />
+                  Sign In
+                </Button>
+              </Link>
 
-            <Link to="/admin" className="hidden sm:block">
-              <Button size="sm" className="bg-primary hover:bg-primary/90">
-                Admin
-              </Button>
-            </Link>
+              <Link to="/admin">
+                <Button 
+                  size="sm" 
+                  className="rounded-full px-6 gradient-luxury text-primary-foreground shadow-lg hover:shadow-xl transition-shadow duration-300"
+                >
+                  Dashboard
+                </Button>
+              </Link>
+            </div>
 
             {/* Mobile Menu Button */}
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden w-11 h-11 rounded-full"
               onClick={() => setIsOpen(!isOpen)}
             >
               {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -91,33 +124,33 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="lg:hidden py-4 border-t border-border animate-slide-up">
-            <div className="flex flex-col gap-2">
+          <div className="lg:hidden py-6 border-t border-border/50 animate-fade-in">
+            <div className="flex flex-col gap-1">
               {navLinks.map(link => (
                 <Link
                   key={link.href}
                   to={link.href}
                   onClick={() => setIsOpen(false)}
                   className={cn(
-                    "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                    "px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300",
                     isActive(link.href)
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted"
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                   )}
                 >
                   {link.label}
                 </Link>
               ))}
-              <div className="flex gap-2 px-4 pt-2">
+              <div className="flex gap-2 px-4 pt-4 mt-2 border-t border-border/50">
                 <Link to="/auth" className="flex-1" onClick={() => setIsOpen(false)}>
-                  <Button variant="outline" size="sm" className="w-full gap-2">
+                  <Button variant="outline" size="sm" className="w-full gap-2 rounded-full">
                     <User className="h-4 w-4" />
-                    Login
+                    Sign In
                   </Button>
                 </Link>
                 <Link to="/admin" className="flex-1" onClick={() => setIsOpen(false)}>
-                  <Button size="sm" className="w-full bg-primary hover:bg-primary/90">
-                    Admin
+                  <Button size="sm" className="w-full rounded-full gradient-luxury text-primary-foreground">
+                    Dashboard
                   </Button>
                 </Link>
               </div>
