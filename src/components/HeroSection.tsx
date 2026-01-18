@@ -4,6 +4,7 @@ import { ArrowRight, Play, Star, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import heroImage from '@/assets/hero-event.jpg';
+import showreelVideo from '@/assets/showreel.mp4';
 
 const HeroSection = () => {
   const [videoOpen, setVideoOpen] = useState(false);
@@ -129,13 +130,12 @@ const HeroSection = () => {
           >
             <X className="h-5 w-5" />
           </button>
-          <div className="relative aspect-video w-full">
-            <iframe
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0"
-              title="EventKraft Showreel"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="absolute inset-0 w-full h-full"
+          <div className="relative aspect-video w-full bg-black">
+            <video
+              src={showreelVideo}
+              autoPlay
+              controls
+              className="absolute inset-0 w-full h-full object-contain"
             />
           </div>
         </DialogContent>
