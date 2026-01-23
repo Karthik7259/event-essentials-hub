@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Package,
@@ -23,6 +23,9 @@ import {
   Download,
   X,
   Upload,
+  CheckSquare,
+  Square,
+  ImagePlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,9 +87,13 @@ const Admin = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(emptyProductForm);
   const [specificationsInput, setSpecificationsInput] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const rentalRequests = [
     { id: 'REQ-001', customer: 'Reliance Industries', email: 'events@ril.com', items: 24, total: 485000, status: 'pending', date: '2024-01-15' },
@@ -218,6 +226,62 @@ const Admin = () => {
     toast.success('Product deleted successfully!');
   };
 
+  // Handle bulk selection toggle
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProducts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle select all
+  const handleSelectAll = () => {
+    if (selectedProducts.size === filteredProducts.length) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(new Set(filteredProducts.map(p => p.id)));
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    setProductList(prev => prev.filter(p => !selectedProducts.has(p.id)));
+    const count = selectedProducts.size;
+    setSelectedProducts(new Set());
+    setIsSelectionMode(false);
+    setIsBulkDeleteDialogOpen(false);
+    toast.success(`${count} product${count > 1 ? 's' : ''} deleted successfully!`);
+  };
+
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imageUrl = event.target?.result as string;
+        setFormData(prev => ({ ...prev, image: imageUrl }));
+        toast.success('Image uploaded successfully!');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Cancel selection mode
+  const cancelSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedProducts(new Set());
+  };
+
   // Product Form Component
   const ProductForm = ({ isEdit = false }: { isEdit?: boolean }) => (
     <div className="space-y-6">
@@ -263,28 +327,47 @@ const Admin = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="price">Price per Day (₹)</Label>
-          <Input
-            id="price"
-            type="number"
-            placeholder="Enter price"
-            value={formData.pricePerDay || ''}
-            onChange={(e) => handleInputChange('pricePerDay', Number(e.target.value))}
-            className="rounded-xl"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="image">Image URL</Label>
+      <div className="space-y-2">
+        <Label htmlFor="price">Price per Day (₹)</Label>
+        <Input
+          id="price"
+          type="number"
+          placeholder="Enter price"
+          value={formData.pricePerDay || ''}
+          onChange={(e) => handleInputChange('pricePerDay', Number(e.target.value))}
+          className="rounded-xl"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Product Image</Label>
+        <div className="flex gap-3">
           <Input
             id="image"
-            placeholder="Enter image URL"
-            value={formData.image}
+            placeholder="Enter image URL or upload"
+            value={formData.image.startsWith('data:') ? 'Uploaded image' : formData.image}
             onChange={(e) => handleInputChange('image', e.target.value)}
-            className="rounded-xl"
+            className="rounded-xl flex-1"
+            readOnly={formData.image.startsWith('data:')}
           />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            accept="image/*"
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-xl gap-2"
+          >
+            <ImagePlus className="h-4 w-4" />
+            Upload
+          </Button>
         </div>
+        <p className="text-xs text-muted-foreground">Upload an image (max 5MB) or enter a URL</p>
       </div>
 
       <div className="space-y-2">
@@ -535,16 +618,80 @@ const Admin = () => {
           {activeTab === 'products' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <p className="text-muted-foreground">
-                  {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
-                </p>
+                <div className="flex items-center gap-4">
+                  <p className="text-muted-foreground">
+                    {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
+                  </p>
+                  {isSelectionMode && selectedProducts.size > 0 && (
+                    <Badge variant="secondary" className="gap-1.5">
+                      <CheckSquare className="h-3 w-3" />
+                      {selectedProducts.size} selected
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isSelectionMode ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSelectAll}
+                        className="rounded-lg gap-2"
+                      >
+                        {selectedProducts.size === filteredProducts.length ? (
+                          <>
+                            <Square className="h-4 w-4" />
+                            Deselect All
+                          </>
+                        ) : (
+                          <>
+                            <CheckSquare className="h-4 w-4" />
+                            Select All
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setIsBulkDeleteDialogOpen(true)}
+                        disabled={selectedProducts.size === 0}
+                        className="rounded-lg gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete ({selectedProducts.size})
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={cancelSelectionMode}
+                        className="rounded-lg"
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsSelectionMode(true)}
+                      className="rounded-lg gap-2"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                      Bulk Select
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredProducts.map((product, index) => (
                   <Card 
                     key={product.id} 
-                    className="luxury-card overflow-hidden border-none group"
+                    className={cn(
+                      "luxury-card overflow-hidden border-none group cursor-pointer transition-all",
+                      isSelectionMode && selectedProducts.has(product.id) && "ring-2 ring-primary ring-offset-2"
+                    )}
                     style={{ animationDelay: `${index * 0.05}s` }}
+                    onClick={() => isSelectionMode && toggleProductSelection(product.id)}
                   >
                     <div className="aspect-[4/3] bg-secondary overflow-hidden relative">
                       <img 
@@ -552,27 +699,45 @@ const Admin = () => {
                         alt={product.name} 
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                       />
+                      {isSelectionMode && (
+                        <div className="absolute top-3 left-3 z-10">
+                          <Checkbox
+                            checked={selectedProducts.has(product.id)}
+                            onCheckedChange={() => toggleProductSelection(product.id)}
+                            className="h-5 w-5 bg-white/90 border-2"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <div className="absolute bottom-3 left-3 right-3 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="rounded-lg gap-1.5 shadow-lg"
-                          onClick={() => handleOpenEditDialog(product)}
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="rounded-lg gap-1.5 shadow-lg"
-                          onClick={() => handleOpenDeleteDialog(product)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </Button>
-                      </div>
+                      {!isSelectionMode && (
+                        <div className="absolute bottom-3 left-3 right-3 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="rounded-lg gap-1.5 shadow-lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditDialog(product);
+                            }}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="rounded-lg gap-1.5 shadow-lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDeleteDialog(product);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between gap-2">
@@ -751,6 +916,42 @@ const Admin = () => {
               className="rounded-xl"
             >
               Delete Product
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-display flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              Delete Multiple Products
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-muted-foreground">
+              Are you sure you want to delete <strong className="text-foreground">{selectedProducts.size} products</strong>? 
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkDeleteDialogOpen(false)}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              className="rounded-xl"
+            >
+              Delete {selectedProducts.size} Products
             </Button>
           </div>
         </DialogContent>
