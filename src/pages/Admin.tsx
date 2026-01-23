@@ -21,25 +21,71 @@ import {
   DollarSign,
   Filter,
   Download,
+  X,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { products } from '@/lib/products';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { products as initialProducts, categories, Product } from '@/lib/products';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type TabType = 'dashboard' | 'products' | 'requests' | 'settings';
+
+interface ProductFormData {
+  name: string;
+  category: string;
+  description: string;
+  image: string;
+  pricePerDay: number;
+  available: boolean;
+  specifications: string[];
+}
+
+const emptyProductForm: ProductFormData = {
+  name: '',
+  category: '',
+  description: '',
+  image: '',
+  pricePerDay: 0,
+  available: true,
+  specifications: [],
+};
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [productList, setProductList] = useState<Product[]>(initialProducts);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [formData, setFormData] = useState<ProductFormData>(emptyProductForm);
+  const [specificationsInput, setSpecificationsInput] = useState('');
 
   const rentalRequests = [
     { id: 'REQ-001', customer: 'Reliance Industries', email: 'events@ril.com', items: 24, total: 485000, status: 'pending', date: '2024-01-15' },
@@ -51,7 +97,7 @@ const Admin = () => {
   const stats = [
     { label: 'Total Revenue', value: '₹24.5L', change: '+12.5%', icon: DollarSign, color: 'bg-green-500/10 text-green-600' },
     { label: 'Active Rentals', value: '28', change: '+8', icon: ShoppingCart, color: 'bg-blue-500/10 text-blue-600' },
-    { label: 'Products', value: products.length.toString(), change: '+3', icon: Package, color: 'bg-purple-500/10 text-purple-600' },
+    { label: 'Products', value: productList.length.toString(), change: '+3', icon: Package, color: 'bg-purple-500/10 text-purple-600' },
     { label: 'Clients', value: '156', change: '+24', icon: Users, color: 'bg-amber-500/10 text-amber-600' },
   ];
 
@@ -77,6 +123,227 @@ const Admin = () => {
     { id: 'requests', label: 'Requests', icon: ShoppingCart },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
+
+  // Filter products based on search
+  const filteredProducts = productList.filter(product =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Handle opening add dialog
+  const handleOpenAddDialog = () => {
+    setFormData(emptyProductForm);
+    setSpecificationsInput('');
+    setIsAddDialogOpen(true);
+  };
+
+  // Handle opening edit dialog
+  const handleOpenEditDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setFormData({
+      name: product.name,
+      category: product.category,
+      description: product.description,
+      image: product.image,
+      pricePerDay: product.pricePerDay,
+      available: product.available,
+      specifications: product.specifications || [],
+    });
+    setSpecificationsInput(product.specifications?.join(', ') || '');
+    setIsEditDialogOpen(true);
+  };
+
+  // Handle opening delete dialog
+  const handleOpenDeleteDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Handle form input changes
+  const handleInputChange = (field: keyof ProductFormData, value: string | number | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle add product
+  const handleAddProduct = () => {
+    const newProduct: Product = {
+      id: Date.now().toString(),
+      name: formData.name,
+      category: formData.category,
+      description: formData.description,
+      image: formData.image || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80',
+      pricePerDay: formData.pricePerDay,
+      available: formData.available,
+      specifications: specificationsInput.split(',').map(s => s.trim()).filter(s => s),
+    };
+    setProductList(prev => [...prev, newProduct]);
+    setIsAddDialogOpen(false);
+    setFormData(emptyProductForm);
+    setSpecificationsInput('');
+    toast.success('Product added successfully!');
+  };
+
+  // Handle edit product
+  const handleEditProduct = () => {
+    if (!selectedProduct) return;
+    setProductList(prev =>
+      prev.map(p =>
+        p.id === selectedProduct.id
+          ? {
+              ...p,
+              name: formData.name,
+              category: formData.category,
+              description: formData.description,
+              image: formData.image,
+              pricePerDay: formData.pricePerDay,
+              available: formData.available,
+              specifications: specificationsInput.split(',').map(s => s.trim()).filter(s => s),
+            }
+          : p
+      )
+    );
+    setIsEditDialogOpen(false);
+    setSelectedProduct(null);
+    setFormData(emptyProductForm);
+    setSpecificationsInput('');
+    toast.success('Product updated successfully!');
+  };
+
+  // Handle delete product
+  const handleDeleteProduct = () => {
+    if (!selectedProduct) return;
+    setProductList(prev => prev.filter(p => p.id !== selectedProduct.id));
+    setIsDeleteDialogOpen(false);
+    setSelectedProduct(null);
+    toast.success('Product deleted successfully!');
+  };
+
+  // Product Form Component
+  const ProductForm = ({ isEdit = false }: { isEdit?: boolean }) => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Product Name</Label>
+          <Input
+            id="name"
+            placeholder="Enter product name"
+            value={formData.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            className="rounded-xl"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="category">Category</Label>
+          <Select
+            value={formData.category}
+            onValueChange={(value) => handleInputChange('category', value)}
+          >
+            <SelectTrigger className="rounded-xl">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id} className="rounded-lg">
+                  {cat.icon} {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          placeholder="Enter product description"
+          value={formData.description}
+          onChange={(e) => handleInputChange('description', e.target.value)}
+          className="rounded-xl min-h-[100px]"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="price">Price per Day (₹)</Label>
+          <Input
+            id="price"
+            type="number"
+            placeholder="Enter price"
+            value={formData.pricePerDay || ''}
+            onChange={(e) => handleInputChange('pricePerDay', Number(e.target.value))}
+            className="rounded-xl"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="image">Image URL</Label>
+          <Input
+            id="image"
+            placeholder="Enter image URL"
+            value={formData.image}
+            onChange={(e) => handleInputChange('image', e.target.value)}
+            className="rounded-xl"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="specifications">Specifications (comma-separated)</Label>
+        <Input
+          id="specifications"
+          placeholder="e.g., Load capacity: 500kg, Height adjustable"
+          value={specificationsInput}
+          onChange={(e) => setSpecificationsInput(e.target.value)}
+          className="rounded-xl"
+        />
+      </div>
+
+      <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl">
+        <div>
+          <Label htmlFor="available">Availability</Label>
+          <p className="text-sm text-muted-foreground">Is this product available for rent?</p>
+        </div>
+        <Switch
+          id="available"
+          checked={formData.available}
+          onCheckedChange={(checked) => handleInputChange('available', checked)}
+        />
+      </div>
+
+      {formData.image && (
+        <div className="space-y-2">
+          <Label>Image Preview</Label>
+          <div className="aspect-video bg-secondary rounded-xl overflow-hidden max-w-sm">
+            <img
+              src={formData.image}
+              alt="Preview"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80';
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-3 pt-4">
+        <Button
+          variant="outline"
+          onClick={() => isEdit ? setIsEditDialogOpen(false) : setIsAddDialogOpen(false)}
+          className="rounded-xl"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={isEdit ? handleEditProduct : handleAddProduct}
+          disabled={!formData.name || !formData.category || !formData.pricePerDay}
+          className="rounded-xl gradient-luxury text-primary-foreground"
+        >
+          {isEdit ? 'Update Product' : 'Add Product'}
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -149,7 +416,10 @@ const Admin = () => {
                   className="pl-11 w-72 h-11 rounded-xl border-border bg-secondary/50"
                 />
               </div>
-              <Button className="gap-2 h-11 rounded-xl gradient-luxury text-primary-foreground shadow-lg">
+              <Button 
+                className="gap-2 h-11 rounded-xl gradient-luxury text-primary-foreground shadow-lg"
+                onClick={handleOpenAddDialog}
+              >
                 <Plus className="h-4 w-4" />
                 Add Product
               </Button>
@@ -263,58 +533,86 @@ const Admin = () => {
 
           {/* Products Tab */}
           {activeTab === 'products' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product, index) => (
-                <Card 
-                  key={product.id} 
-                  className="luxury-card overflow-hidden border-none group"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <div className="aspect-[4/3] bg-secondary overflow-hidden">
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                    />
-                  </div>
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-foreground truncate">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground mt-0.5">₹{product.pricePerDay}/day</p>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <p className="text-muted-foreground">
+                  {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProducts.map((product, index) => (
+                  <Card 
+                    key={product.id} 
+                    className="luxury-card overflow-hidden border-none group"
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
+                    <div className="aspect-[4/3] bg-secondary overflow-hidden relative">
+                      <img 
+                        src={product.image} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute bottom-3 left-3 right-3 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="rounded-lg gap-1.5 shadow-lg"
+                          onClick={() => handleOpenEditDialog(product)}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="rounded-lg gap-1.5 shadow-lg"
+                          onClick={() => handleOpenDeleteDialog(product)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
+                        </Button>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="shrink-0 rounded-lg">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl">
-                          <DropdownMenuItem className="gap-2 rounded-lg">
-                            <Edit className="h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 rounded-lg text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </div>
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        "mt-3",
-                        product.available 
-                          ? 'bg-green-50 text-green-700 border-green-200' 
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
-                      )}
-                    >
-                      {product.available ? 'Available' : 'Reserved'}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-foreground truncate">{product.name}</h3>
+                          <p className="text-sm text-muted-foreground mt-0.5">₹{product.pricePerDay}/day</p>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="shrink-0 rounded-lg">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem className="gap-2 rounded-lg" onClick={() => handleOpenEditDialog(product)}>
+                              <Edit className="h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2 rounded-lg text-destructive" onClick={() => handleOpenDeleteDialog(product)}>
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "mt-3",
+                          product.available 
+                            ? 'bg-green-50 text-green-700 border-green-200' 
+                            : 'bg-gray-50 text-gray-600 border-gray-200'
+                        )}
+                      >
+                        {product.available ? 'Available' : 'Reserved'}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
 
@@ -391,6 +689,72 @@ const Admin = () => {
           )}
         </div>
       </main>
+
+      {/* Add Product Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-display flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl gradient-luxury flex items-center justify-center">
+                <Plus className="h-5 w-5 text-primary-foreground" />
+              </div>
+              Add New Product
+            </DialogTitle>
+          </DialogHeader>
+          <ProductForm isEdit={false} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-display flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                <Edit className="h-5 w-5 text-foreground" />
+              </div>
+              Edit Product
+            </DialogTitle>
+          </DialogHeader>
+          <ProductForm isEdit={true} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-display flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              Delete Product
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-muted-foreground">
+              Are you sure you want to delete <strong className="text-foreground">{selectedProduct?.name}</strong>? 
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProduct}
+              className="rounded-xl"
+            >
+              Delete Product
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
