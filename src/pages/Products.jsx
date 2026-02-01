@@ -46,6 +46,7 @@ const Products = () => {
             
             return {
               id: product._id,
+              _id: product._id, // Keep both for compatibility
               name: product.name,
               description: product.description,
               category: product.category,

@@ -107,8 +107,25 @@ export const productAPI = {
   },
 
   // Update product (admin only)
-  updateProduct: (id, data, token) =>
-    apiCall(`/api/product/update/${id}`, 'PUT', data, token),
+  updateProduct: (id, formData, token) => {
+    const headers = {};
+    if (token) {
+      headers['token'] = token;
+    }
+
+    const options = {
+      method: 'PUT',
+      headers,
+      body: formData, // multipart/form-data
+    };
+
+    return fetch(`${API_BASE_URL}/api/product/update/${id}`, options)
+      .then(response => response.json())
+      .catch(error => {
+        console.error('API call failed:', error);
+        throw error;
+      });
+  },
 
   // Delete product (admin only)
   deleteProduct: (id, token) =>

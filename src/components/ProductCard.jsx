@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Minus, ArrowRight, Check, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Minus, ArrowRight, Check, Sparkles, Eye, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { cn } from '@/lib/utils';
@@ -33,52 +34,79 @@ const ProductCard = ({ product }) => {
 
       <div className="relative bg-card rounded-2xl overflow-hidden shadow-card transition-all duration-500 group-hover:shadow-luxury">
         {/* Image Container */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          />
-          
-          {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          
-          {/* Premium badge */}
-          <div className="absolute top-4 left-4">
-            <div className="flex items-center gap-1.5 bg-card/90 backdrop-blur-md rounded-full px-3 py-1.5 shadow-lg">
-              <Sparkles className="h-3.5 w-3.5 text-accent" />
-              <span className="text-xs font-semibold text-foreground">Premium</span>
+        <Link to={`/product/${product._id || product.id}`}>
+          <div className="relative aspect-[4/3] overflow-hidden bg-secondary cursor-pointer">
+            <img
+              src={product.images?.[0] || product.image || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80'}
+              alt={product.name}
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+            
+            {/* Overlay gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            {/* View Details Button */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Button className="gap-2 shadow-xl">
+                <Eye className="h-4 w-4" />
+                View Details
+              </Button>
             </div>
-          </div>
+            
+            {/* Premium badge */}
+            <div className="absolute top-4 left-4">
+              <div className="flex items-center gap-1.5 bg-card/90 backdrop-blur-md rounded-full px-3 py-1.5 shadow-lg">
+                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                <span className="text-xs font-semibold text-foreground">Premium</span>
+              </div>
+            </div>
 
-          {/* Price badge */}
-          <div className="absolute top-4 right-4">
-            <div className="gradient-gold rounded-full px-4 py-2 shadow-gold">
-              <span className="text-sm font-bold text-primary">₹{product.pricePerDay}</span>
-              <span className="text-xs text-primary/70">/day</span>
+            {/* Price badge */}
+            <div className="absolute top-4 right-4">
+              <div className="gradient-gold rounded-full px-4 py-2 shadow-gold">
+                <span className="text-sm font-bold text-primary">₹{product.pricePerDay}</span>
+                <span className="text-xs text-primary/70">/day</span>
+              </div>
             </div>
-          </div>
 
-          {/* Unavailable overlay */}
-          {!product.available && (
-            <div className="absolute inset-0 bg-primary/70 backdrop-blur-sm flex items-center justify-center">
-              <span className="bg-card text-foreground px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
-                Currently Reserved
-              </span>
-            </div>
-          )}
-        </div>
+            {/* Unavailable overlay */}
+            {!product.available && !product.isAvailable && (
+              <div className="absolute inset-0 bg-primary/70 backdrop-blur-sm flex items-center justify-center">
+                <span className="bg-card text-foreground px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
+                  Currently Reserved
+                </span>
+              </div>
+            )}
+          </div>
+        </Link>
 
         {/* Content */}
         <div className="p-6 space-y-5">
           {/* Title & Description */}
           <div>
-            <h3 className="font-display text-xl font-semibold text-foreground mb-2 group-hover:text-accent transition-colors duration-300">
-              {product.name}
-            </h3>
+            <Link to={`/product/${product._id || product.id}`}>
+              <h3 className="font-display text-xl font-semibold text-foreground mb-2 group-hover:text-accent transition-colors duration-300 cursor-pointer">
+                {product.name}
+              </h3>
+            </Link>
             <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
               {product.description}
             </p>
+            
+            {/* Rating */}
+            {(product.rating > 0 || product.reviews?.length > 0) && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center">
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <span className="text-sm font-medium text-foreground ml-1">
+                    {product.rating?.toFixed(1) || '0.0'}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  ({product.reviews?.length || 0} reviews)
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Specifications */}

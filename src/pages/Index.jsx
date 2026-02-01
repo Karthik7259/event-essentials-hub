@@ -1,15 +1,56 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, Shield, Truck, Clock, HeadphonesIcon, Sparkles, ArrowUpRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
 import CategoryCard from '@/components/CategoryCard';
 import ProductCard from '@/components/ProductCard';
-import { categories, products } from '@/lib/products';
+import { categories } from '@/lib/products';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const Index = () => {
-  const featuredProducts = products.slice(0, 4);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/product/list`);
+        const data = await response.json();
+        
+        if (data.success && data.products) {
+          // Transform backend products to frontend format
+          const transformedProducts = data.products.map(product => ({
+            id: product._id,
+            _id: product._id, // Keep both for compatibility
+            name: product.name,
+            category: product.category,
+            description: product.description,
+            image: product.images && product.images[0] ? product.images[0] : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80',
+            images: product.images || [],
+            pricePerDay: product.pricePerDay,
+            available: product.isAvailable,
+            isAvailable: product.isAvailable,
+            rating: product.rating || 0,
+            reviews: product.reviews || [],
+            specifications: product.specifications || []
+          }));
+          
+          // Get first 4 products as featured
+          setFeaturedProducts(transformedProducts.slice(0, 4));
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const benefits = [
     {
@@ -115,9 +156,19 @@ const Index = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+              {loading ? (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-muted-foreground">Loading products...</p>
+                </div>
+              ) : featuredProducts.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-muted-foreground">No products available</p>
+                </div>
+              ) : (
+                featuredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))
+              )}
             </div>
           </div>
         </section>

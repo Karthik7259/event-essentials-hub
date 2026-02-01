@@ -32,6 +32,8 @@ import {
   Calendar,
   MapPin,
   FileText,
+  Tag,
+  Image,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,7 +62,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { products as initialProducts, categories } from '@/lib/products';
+import { categories } from '@/lib/products';
 import { productAPI, orderAPI } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -88,6 +90,9 @@ const ProductForm = ({
   tagsInput, 
   specificationsInput,
   uploadedImages,
+  existingImages = [],
+  deletedImageIndices = [],
+  removeExistingImage,
   fileInputRef,
   handleInputChange,
   setFeaturesInput,
@@ -100,230 +105,306 @@ const ProductForm = ({
   setIsAddDialogOpen,
   setIsEditDialogOpen,
   isSubmitting
-}) => (
-  <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
-    {/* Basic Info */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Product Name *</Label>
-        <Input
-          id="name"
-          placeholder="Enter product name"
-          value={formData.name}
-          onChange={(e) => handleInputChange('name', e.target.value)}
-          className="rounded-xl"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="category">Category *</Label>
-        <Select
-          value={formData.category}
-          onValueChange={(value) => handleInputChange('category', value)}
-        >
-          <SelectTrigger className="rounded-xl">
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl">
-            {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id} className="rounded-lg">
-                {cat.icon} {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
+}) => {
+  return (
+    <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-4">
+      {/* Section: Basic Information */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b border-border">
+          <Package className="h-5 w-5 text-accent" />
+          <h3 className="font-semibold text-foreground">Basic Information</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-sm font-medium">Product Name *</Label>
+            <Input
+              id="name"
+              placeholder="e.g., Aluminium German Hanger"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              className="rounded-lg border-border"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
+            <Select
+              value={formData.category}
+              onValueChange={(value) => handleInputChange('category', value)}
+            >
+              <SelectTrigger className="rounded-lg border-border">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent className="rounded-lg">
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id} className="rounded-md">
+                    {cat.icon} {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-    <div className="space-y-2">
-      <Label htmlFor="description">Description *</Label>
-      <Textarea
-        id="description"
-        placeholder="Enter product description"
-        value={formData.description}
-        onChange={(e) => handleInputChange('description', e.target.value)}
-        className="rounded-xl min-h-[100px]"
-      />
-    </div>
-
-    {/* Pricing & Quantity */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="pricePerDay">Price per Day (₹) *</Label>
-        <Input
-          id="pricePerDay"
-          type="number"
-          placeholder="Enter price"
-          value={formData.pricePerDay || ''}
-          onChange={(e) => handleInputChange('pricePerDay', Number(e.target.value))}
-          className="rounded-xl"
-        />
+        <div className="space-y-2">
+          <Label htmlFor="description" className="text-sm font-medium">Description *</Label>
+          <Textarea
+            id="description"
+            placeholder="Detailed description of the product..."
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            className="rounded-lg border-border min-h-[80px]"
+          />
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="depositAmount">Deposit Amount (₹)</Label>
-        <Input
-          id="depositAmount"
-          type="number"
-          placeholder="Enter deposit amount"
-          value={formData.depositAmount || ''}
-          onChange={(e) => handleInputChange('depositAmount', Number(e.target.value))}
-          className="rounded-xl"
-        />
+
+      {/* Section: Pricing & Availability */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b border-border">
+          <DollarSign className="h-5 w-5 text-accent" />
+          <h3 className="font-semibold text-foreground">Pricing & Availability</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="pricePerDay" className="text-sm font-medium">Price per Day (₹) *</Label>
+            <Input
+              id="pricePerDay"
+              type="number"
+              placeholder="0"
+              value={formData.pricePerDay || ''}
+              onChange={(e) => handleInputChange('pricePerDay', Number(e.target.value))}
+              className="rounded-lg border-border"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="depositAmount" className="text-sm font-medium">Deposit Amount (₹)</Label>
+            <Input
+              id="depositAmount"
+              type="number"
+              placeholder="0"
+              value={formData.depositAmount || ''}
+              onChange={(e) => handleInputChange('depositAmount', Number(e.target.value))}
+              className="rounded-lg border-border"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="quantity" className="text-sm font-medium">Total Quantity</Label>
+            <Input
+              id="quantity"
+              type="number"
+              min="1"
+              placeholder="1"
+              value={formData.quantity || 1}
+              onChange={(e) => handleInputChange('quantity', Number(e.target.value))}
+              className="rounded-lg border-border"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="availableQuantity" className="text-sm font-medium">Available Quantity</Label>
+            <Input
+              id="availableQuantity"
+              type="number"
+              min="1"
+              placeholder="1"
+              value={formData.availableQuantity || 1}
+              onChange={(e) => handleInputChange('availableQuantity', Number(e.target.value))}
+              className="rounded-lg border-border"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="minimumRentalDays" className="text-sm font-medium">Min Rental Days</Label>
+            <Input
+              id="minimumRentalDays"
+              type="number"
+              min="1"
+              placeholder="1"
+              value={formData.minimumRentalDays || 1}
+              onChange={(e) => handleInputChange('minimumRentalDays', Number(e.target.value))}
+              className="rounded-lg border-border"
+            />
+          </div>
+        </div>
       </div>
-    </div>
 
-    {/* Quantity & Availability */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="space-y-2">
-        <Label htmlFor="quantity">Total Quantity</Label>
-        <Input
-          id="quantity"
-          type="number"
-          min="1"
-          placeholder="Total quantity"
-          value={formData.quantity || 1}
-          onChange={(e) => handleInputChange('quantity', Number(e.target.value))}
-          className="rounded-xl"
-        />
+      {/* Section: Features & Tags */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b border-border">
+          <Tag className="h-5 w-5 text-accent" />
+          <h3 className="font-semibold text-foreground">Features & Tags</h3>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="features" className="text-sm font-medium">Features</Label>
+          <Input
+            id="features"
+            placeholder="e.g., Premium quality, Durable, Easy setup"
+            value={featuresInput}
+            onChange={(e) => setFeaturesInput(e.target.value)}
+            className="rounded-lg border-border"
+          />
+          <p className="text-xs text-muted-foreground">Separate with commas</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tags" className="text-sm font-medium">Tags</Label>
+          <Input
+            id="tags"
+            placeholder="e.g., wedding, decoration, luxury"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            className="rounded-lg border-border"
+          />
+          <p className="text-xs text-muted-foreground">Separate with commas</p>
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="availableQuantity">Available Quantity</Label>
-        <Input
-          id="availableQuantity"
-          type="number"
-          min="1"
-          placeholder="Available quantity"
-          value={formData.availableQuantity || 1}
-          onChange={(e) => handleInputChange('availableQuantity', Number(e.target.value))}
-          className="rounded-xl"
-        />
+
+      {/* Section: Specifications */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b border-border">
+          <Settings className="h-5 w-5 text-accent" />
+          <h3 className="font-semibold text-foreground">Specifications</h3>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="specifications" className="text-sm font-medium">Product Specifications</Label>
+          <Textarea
+            id="specifications"
+            placeholder="Write product specifications..."
+            value={specificationsInput}
+            onChange={(e) => setSpecificationsInput(e.target.value)}
+            className="rounded-lg border-border min-h-[120px] text-sm leading-relaxed"
+          />
+          <p className="text-xs text-muted-foreground">
+            Write detailed product specifications in paragraph format
+          </p>
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="minimumRentalDays">Min Rental Days</Label>
-        <Input
-          id="minimumRentalDays"
-          type="number"
-          min="1"
-          placeholder="Minimum rental days"
-          value={formData.minimumRentalDays || 1}
-          onChange={(e) => handleInputChange('minimumRentalDays', Number(e.target.value))}
-          className="rounded-xl"
-        />
+
+      {/* Section: Product Images */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b border-border">
+          <Image className="h-5 w-5 text-accent" />
+          <h3 className="font-semibold text-foreground">Product Images *</h3>
+        </div>
+
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-lg gap-2 w-full border-2 border-dashed border-border hover:border-accent transition-colors py-6"
+          >
+            <ImagePlus className="h-5 w-5" />
+            <div className="text-left">
+              <p className="font-medium">Click to upload</p>
+              <p className="text-xs text-muted-foreground">or drag & drop</p>
+            </div>
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            accept="image/*"
+            multiple
+            className="hidden"
+          />
+          <p className="text-xs text-muted-foreground mt-2">PNG, JPG up to 5MB each</p>
+        </div>
+
+        {/* Existing Images (for edit mode) */}
+        {isEdit && existingImages.length > 0 && (
+          <div>
+            <p className="text-sm font-medium text-foreground mb-2">Current Images ({existingImages.filter((_, i) => !deletedImageIndices.includes(i)).length})</p>
+            <div className="grid grid-cols-4 gap-2">
+              {existingImages.map((imageUrl, index) => (
+                !deletedImageIndices.includes(index) && (
+                  <div key={`existing-${index}`} className="relative group">
+                    <div className="aspect-square bg-secondary rounded-lg overflow-hidden border border-border">
+                      <img
+                        src={imageUrl}
+                        alt={`Existing ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(index)}
+                      className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-4 w-4 text-white" />
+                    </button>
+                    <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded">
+                      Current
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* New Uploaded Images */}
+        {uploadedImages.length > 0 && (
+          <div>
+            <p className="text-sm font-medium text-foreground mb-2">New Images ({uploadedImages.length})</p>
+            <div className="grid grid-cols-4 gap-2">
+              {uploadedImages.map((image, index) => (
+                <div key={`new-${index}`} className="relative group">
+                  <div className="aspect-square bg-secondary rounded-lg overflow-hidden border border-border">
+                    <img
+                      src={URL.createObjectURL(image)}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="h-4 w-4 text-white" />
+                  </button>
+                  <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-2 py-0.5 rounded">
+                    New
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
 
-    {/* Features */}
-    <div className="space-y-2">
-      <Label htmlFor="features">Features (comma-separated)</Label>
-      <Input
-        id="features"
-        placeholder="e.g., Premium quality, Durable, Easy setup"
-        value={featuresInput}
-        onChange={(e) => setFeaturesInput(e.target.value)}
-        className="rounded-xl"
-      />
-      <p className="text-xs text-muted-foreground">Separate features with commas</p>
-    </div>
-
-    {/* Tags */}
-    <div className="space-y-2">
-      <Label htmlFor="tags">Tags (comma-separated)</Label>
-      <Input
-        id="tags"
-        placeholder="e.g., wedding, decoration, luxury"
-        value={tagsInput}
-        onChange={(e) => setTagsInput(e.target.value)}
-        className="rounded-xl"
-      />
-      <p className="text-xs text-muted-foreground">Separate tags with commas</p>
-    </div>
-
-    {/* Specifications */}
-    <div className="space-y-2">
-      <Label htmlFor="specifications">Specifications (JSON or key:value pairs)</Label>
-      <Textarea
-        id="specifications"
-        placeholder={`Enter as JSON: {"dimensions": "20x10 feet", "weight": "100kg"}\nOr as pairs: dimensions: 20x10 feet, weight: 100kg`}
-        value={specificationsInput}
-        onChange={(e) => setSpecificationsInput(e.target.value)}
-        className="rounded-xl min-h-[100px]"
-      />
-      <p className="text-xs text-muted-foreground">Use JSON format or key:value pairs separated by commas</p>
-    </div>
-
-    {/* Images Upload */}
-    <div className="space-y-2">
-      <Label>Product Images *</Label>
-      <div className="flex gap-3">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleImageUpload}
-          accept="image/*"
-          multiple
-          className="hidden"
-        />
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-3 pt-4 border-t border-border sticky bottom-0 bg-background">
         <Button
-          type="button"
           variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-          className="rounded-xl gap-2 flex-1"
+          onClick={() => isEdit ? setIsEditDialogOpen(false) : setIsAddDialogOpen(false)}
+          className="rounded-lg"
         >
-          <ImagePlus className="h-4 w-4" />
-          Upload Images
+          Cancel
+        </Button>
+        <Button
+          onClick={isEdit ? handleEditProduct : handleAddProduct}
+          disabled={!formData.name || !formData.category || !formData.pricePerDay || (!isEdit && uploadedImages.length === 0) || (isEdit && existingImages.filter((_, i) => !deletedImageIndices.includes(i)).length === 0 && uploadedImages.length === 0) || isSubmitting}
+          className="rounded-lg gradient-luxury text-primary-foreground gap-2"
+        >
+          {isSubmitting && <Loader className="h-4 w-4 animate-spin" />}
+          {isEdit ? 'Update Product' : 'Add Product'}
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">Upload multiple images (max 5MB each)</p>
-
-      {/* Uploaded Images Preview */}
-      {uploadedImages.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 mt-3">
-          {uploadedImages.map((image, index) => (
-            <div key={index} className="relative group">
-              <div className="aspect-square bg-secondary rounded-lg overflow-hidden">
-                <img
-                  src={URL.createObjectURL(image)}
-                  alt={`Preview ${index}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => removeImage(index)}
-                className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
-
-    <div className="flex justify-end gap-3 pt-4">
-      <Button
-        variant="outline"
-        onClick={() => isEdit ? setIsEditDialogOpen(false) : setIsAddDialogOpen(false)}
-        className="rounded-xl"
-      >
-        Cancel
-      </Button>
-      <Button
-        onClick={isEdit ? handleEditProduct : handleAddProduct}
-        disabled={!formData.name || !formData.category || !formData.pricePerDay || uploadedImages.length === 0 || isSubmitting}
-        className="rounded-xl gradient-luxury text-primary-foreground gap-2"
-      >
-        {isSubmitting && <Loader className="h-4 w-4 animate-spin" />}
-        {isEdit ? 'Update Product' : 'Add Product'}
-      </Button>
-    </div>
-  </div>
-);
+  );
+};;
 
 const Admin = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
-  const [productList, setProductList] = useState(initialProducts);
+  const [productList, setProductList] = useState([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -336,6 +417,8 @@ const Admin = () => {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [uploadedImages, setUploadedImages] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
+  const [deletedImageIndices, setDeletedImageIndices] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef(null);
   const [orders, setOrders] = useState([]);
@@ -410,6 +493,34 @@ const Admin = () => {
 
     fetchOrderStats();
   }, [activeTab]);
+
+  // Fetch products from backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await productAPI.getAllProducts(token);
+        
+        if (response.success && response.products) {
+          // Transform products to ensure image field is set
+          const transformedProducts = response.products.map(product => ({
+            ...product,
+            id: product._id || product.id,
+            image: product.images?.[0] || product.image || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80',
+            available: product.isAvailable !== undefined ? product.isAvailable : true,
+          }));
+          setProductList(transformedProducts);
+        } else {
+          setProductList([]);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setProductList([]);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // Map orders to display format for requests tab
   const rentalRequests = orders.map(order => ({
@@ -495,12 +606,41 @@ const Admin = () => {
       name: product.name,
       category: product.category,
       description: product.description,
-      image: product.image,
       pricePerDay: product.pricePerDay,
-      available: product.available,
-      specifications: product.specifications || [],
+      quantity: product.quantity || 1,
+      availableQuantity: product.availableQuantity || 1,
+      minimumRentalDays: product.minimumRentalDays || 1,
+      depositAmount: product.depositAmount || 0,
     });
-    setSpecificationsInput(product.specifications?.join(', ') || '');
+    
+    // Set features
+    if (product.features && Array.isArray(product.features)) {
+      setFeaturesInput(product.features.join(', '));
+    } else {
+      setFeaturesInput('');
+    }
+    
+    // Set tags
+    if (product.tags && Array.isArray(product.tags)) {
+      setTagsInput(product.tags.join(', '));
+    } else {
+      setTagsInput('');
+    }
+    
+    // Set specifications (now a string)
+    if (typeof product.specifications === 'string') {
+      setSpecificationsInput(product.specifications);
+    } else if (Array.isArray(product.specifications)) {
+      setSpecificationsInput(product.specifications.join(', '));
+    } else {
+      setSpecificationsInput('');
+    }
+    
+    // Set existing images from product
+    const existingImgs = product.images || product.image || [];
+    setExistingImages(Array.isArray(existingImgs) ? existingImgs : []);
+    setUploadedImages([]);
+    setDeletedImageIndices([]);
     setIsEditDialogOpen(true);
   };
 
@@ -538,20 +678,9 @@ const Admin = () => {
       formDataToSend.append('tags', JSON.stringify(tagsInput.split(',').map(t => t.trim()).filter(t => t)));
       formDataToSend.append('depositAmount', formData.depositAmount);
       
-      // Parse specifications as JSON
-      if (specificationsInput) {
-        try {
-          const specs = JSON.parse(specificationsInput);
-          formDataToSend.append('specifications', JSON.stringify(specs));
-        } catch {
-          // If not valid JSON, create object from key:value pairs
-          const specsObj = {};
-          specificationsInput.split(',').forEach(item => {
-            const [key, value] = item.split(':').map(s => s.trim());
-            if (key && value) specsObj[key] = value;
-          });
-          formDataToSend.append('specifications', JSON.stringify(specsObj));
-        }
+      // Add specifications as plain string
+      if (specificationsInput.trim()) {
+        formDataToSend.append('specifications', specificationsInput.trim());
       }
 
       // Add images
@@ -599,37 +728,126 @@ const Admin = () => {
     }
   };
 
-  const handleEditProduct = () => {
+  const handleEditProduct = async () => {
     if (!selectedProduct) return;
-    setProductList(prev =>
-      prev.map(p =>
-        p.id === selectedProduct.id
-          ? {
-              ...p,
-              name: formData.name,
-              category: formData.category,
-              description: formData.description,
-              image: formData.image,
-              pricePerDay: formData.pricePerDay,
-              available: formData.available,
-              specifications: specificationsInput.split(',').map(s => s.trim()).filter(s => s),
-            }
-          : p
-      )
-    );
-    setIsEditDialogOpen(false);
-    setSelectedProduct(null);
-    setFormData(emptyProductForm);
-    setSpecificationsInput('');
-    toast.success('Product updated successfully!');
+
+    if (!formData.name || !formData.category || !formData.pricePerDay) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('pricePerDay', formData.pricePerDay);
+      formDataToSend.append('quantity', formData.quantity || 1);
+      formDataToSend.append('availableQuantity', formData.availableQuantity || 1);
+      formDataToSend.append('features', JSON.stringify(featuresInput.split(',').map(f => f.trim()).filter(f => f)));
+      formDataToSend.append('minimumRentalDays', formData.minimumRentalDays || 1);
+      formDataToSend.append('tags', JSON.stringify(tagsInput.split(',').map(t => t.trim()).filter(t => t)));
+      formDataToSend.append('depositAmount', formData.depositAmount || 0);
+      
+      // Add specifications as plain string
+      if (specificationsInput.trim()) {
+        formDataToSend.append('specifications', specificationsInput.trim());
+      }
+
+      // Add new images if uploaded
+      if (uploadedImages.length > 0) {
+        uploadedImages.forEach((image) => {
+          formDataToSend.append('images', image);
+        });
+      }
+
+      // Add deleted image indices
+      if (deletedImageIndices.length > 0) {
+        formDataToSend.append('deletedImages', JSON.stringify(deletedImageIndices));
+      }
+
+      // Get admin token from localStorage
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        toast.error('Please login as admin first');
+        return;
+      }
+
+      const response = await productAPI.updateProduct(selectedProduct._id || selectedProduct.id, formDataToSend, adminToken);
+      
+      if (response.success) {
+        // Update local list
+        setProductList(prev =>
+          prev.map(p =>
+            (p.id === selectedProduct.id || p._id === selectedProduct._id)
+              ? {
+                  ...p,
+                  id: response.product._id,
+                  _id: response.product._id,
+                  name: response.product.name,
+                  category: response.product.category,
+                  description: response.product.description,
+                  image: response.product.images?.[0] || p.image,
+                  images: response.product.images || p.images,
+                  pricePerDay: response.product.pricePerDay,
+                  quantity: response.product.quantity,
+                  availableQuantity: response.product.availableQuantity,
+                  features: response.product.features,
+                  specifications: response.product.specifications,
+                  minimumRentalDays: response.product.minimumRentalDays,
+                  tags: response.product.tags,
+                  depositAmount: response.product.depositAmount,
+                  available: response.product.isAvailable,
+                  isAvailable: response.product.isAvailable,
+                }
+              : p
+          )
+        );
+        setIsEditDialogOpen(false);
+        setSelectedProduct(null);
+        setFormData(emptyProductForm);
+        setFeaturesInput('');
+        setTagsInput('');
+        setSpecificationsInput('');
+        setUploadedImages([]);
+        setExistingImages([]);
+        setDeletedImageIndices([]);
+        toast.success('Product updated successfully!');
+      } else {
+        toast.error(response.message || 'Failed to update product');
+      }
+    } catch (error) {
+      console.error('Error updating product:', error);
+      toast.error('Error updating product. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteProduct = () => {
+  const handleDeleteProduct = async () => {
     if (!selectedProduct) return;
-    setProductList(prev => prev.filter(p => p.id !== selectedProduct.id));
-    setIsDeleteDialogOpen(false);
-    setSelectedProduct(null);
-    toast.success('Product deleted successfully!');
+    try {
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        toast.error('Please login as admin first');
+        return;
+      }
+
+      const productId = selectedProduct._id || selectedProduct.id;
+      const response = await productAPI.deleteProduct(productId, adminToken);
+      if (response.success) {
+        setProductList(prev => prev.filter(p => (p.id !== productId && p._id !== productId)));
+        setIsDeleteDialogOpen(false);
+        setSelectedProduct(null);
+        toast.success('Product deleted successfully!');
+      } else {
+        toast.error(response.message || 'Failed to delete product');
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast.error('Error deleting product. Please try again.');
+    }
   };
 
   const toggleProductSelection = (productId) => {
@@ -652,13 +870,29 @@ const Admin = () => {
     }
   };
 
-  const handleBulkDelete = () => {
-    setProductList(prev => prev.filter(p => !selectedProducts.has(p.id)));
-    const count = selectedProducts.size;
-    setSelectedProducts(new Set());
-    setIsSelectionMode(false);
-    setIsBulkDeleteDialogOpen(false);
-    toast.success(`${count} product${count > 1 ? 's' : ''} deleted successfully!`);
+  const handleBulkDelete = async () => {
+    try {
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        toast.error('Please login as admin first');
+        return;
+      }
+
+      const idsToDelete = Array.from(selectedProducts);
+      const results = await Promise.all(
+        idsToDelete.map((id) => productAPI.deleteProduct(id, adminToken))
+      );
+
+      const successCount = results.filter(r => r && r.success).length;
+      setProductList(prev => prev.filter(p => !selectedProducts.has(p.id)));
+      setSelectedProducts(new Set());
+      setIsSelectionMode(false);
+      setIsBulkDeleteDialogOpen(false);
+      toast.success(`${successCount} product${successCount !== 1 ? 's' : ''} deleted successfully!`);
+    } catch (error) {
+      console.error('Error bulk deleting products:', error);
+      toast.error('Error deleting products. Please try again.');
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -686,6 +920,10 @@ const Admin = () => {
 
   const removeImage = (index) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (index) => {
+    setDeletedImageIndices(prev => [...prev, index]);
   };
 
   const cancelSelectionMode = () => {
@@ -720,6 +958,100 @@ const Admin = () => {
     } catch (error) {
       console.error('Error approving request:', error);
       toast.error('Error approving request');
+    }
+  };
+
+  const handleExportOrders = () => {
+    try {
+      // Prepare data for export
+      const exportData = orders.map(order => ({
+        'Order ID': order._id.slice(-8).toUpperCase(),
+        'Customer Name': order.userName,
+        'Email': order.userEmail,
+        'Phone': order.userPhone || 'N/A',
+        'Total Amount': `₹${order.totalAmount}`,
+        'Status': order.status,
+        'Event Date': order.eventDate ? new Date(order.eventDate).toLocaleDateString() : 'N/A',
+        'Event Location': order.eventLocation || 'N/A',
+        'Items': order.items.map(item => `${item.productName} (${item.quantity}x)`).join(', '),
+        'Created Date': new Date(order.createdAt).toLocaleString(),
+      }));
+
+      // Convert to CSV
+      const headers = Object.keys(exportData[0]);
+      const csvContent = [
+        headers.join(','),
+        ...exportData.map(row => 
+          headers.map(header => {
+            const value = row[header];
+            // Escape commas and quotes in values
+            return `"${String(value).replace(/"/g, '""')}"`;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(`Exported ${orders.length} orders successfully!`);
+    } catch (error) {
+      console.error('Error exporting orders:', error);
+      toast.error('Failed to export orders');
+    }
+  };
+
+  const handleExportProducts = () => {
+    try {
+      // Prepare data for export
+      const exportData = productList.map(product => ({
+        'Product ID': product._id || product.id,
+        'Name': product.name,
+        'Category': product.category,
+        'Price per Day': `₹${product.pricePerDay}`,
+        'Total Quantity': product.quantity,
+        'Available Quantity': product.availableQuantity,
+        'Minimum Rental Days': product.minimumRentalDays || 1,
+        'Deposit Amount': `₹${product.depositAmount || 0}`,
+        'Rating': product.rating || 0,
+        'Reviews': product.reviews?.length || 0,
+        'Status': product.isAvailable ? 'Available' : 'Unavailable',
+      }));
+
+      // Convert to CSV
+      const headers = Object.keys(exportData[0]);
+      const csvContent = [
+        headers.join(','),
+        ...exportData.map(row => 
+          headers.map(header => {
+            const value = row[header];
+            return `"${String(value).replace(/"/g, '""')}"`;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `products_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(`Exported ${productList.length} products successfully!`);
+    } catch (error) {
+      console.error('Error exporting products:', error);
+      toast.error('Failed to export products');
     }
   };
 
@@ -828,10 +1160,10 @@ const Admin = () => {
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-8 pr-32">
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-8">
+            <div className="space-y-8 max-w-6xl ml-auto">
               {/* Stats Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, index) => (
@@ -938,7 +1270,7 @@ const Admin = () => {
 
           {/* Products Tab */}
           {activeTab === 'products' && (
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-6xl ml-auto">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <p className="text-muted-foreground">
@@ -1017,7 +1349,7 @@ const Admin = () => {
                   >
                     <div className="aspect-[4/3] bg-secondary overflow-hidden relative">
                       <img 
-                        src={product.image} 
+                        src={product.images?.[0] || product.image || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80'} 
                         alt={product.name} 
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                       />
@@ -1105,7 +1437,7 @@ const Admin = () => {
 
           {/* Orders Tab */}
           {activeTab === 'orders' && (
-            <div className="space-y-6">
+            <div className="space-y-6 max-w-6xl ml-auto">
               <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                 <div>
                   <h2 className="text-2xl font-display font-bold text-foreground">Order Management</h2>
@@ -1126,7 +1458,7 @@ const Admin = () => {
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="sm" className="gap-2 rounded-xl">
+                  <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={handleExportOrders}>
                     <Download className="h-4 w-4" />
                     Export
                   </Button>
@@ -1303,7 +1635,7 @@ const Admin = () => {
 
           {/* Requests Tab */}
           {activeTab === 'requests' && (
-            <Card className="luxury-card border-none">
+            <Card className="luxury-card border-none max-w-6xl ml-auto">
               <CardHeader className="flex flex-row items-center justify-between pb-4">
                 <CardTitle className="text-lg font-semibold">All Requests (Orders)</CardTitle>
                 <div className="flex gap-2">
@@ -1311,7 +1643,7 @@ const Admin = () => {
                     <Filter className="h-4 w-4" />
                     Filter
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-2 rounded-lg">
+                  <Button variant="outline" size="sm" className="gap-2 rounded-lg" onClick={handleExportOrders}>
                     <Download className="h-4 w-4" />
                     Export
                   </Button>
@@ -1389,7 +1721,7 @@ const Admin = () => {
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <Card className="luxury-card border-none">
+            <Card className="luxury-card border-none max-w-6xl ml-auto">
               <CardContent className="p-8">
                 <div className="text-center py-12">
                   <Settings className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
@@ -1454,6 +1786,9 @@ const Admin = () => {
             tagsInput={tagsInput}
             specificationsInput={specificationsInput}
             uploadedImages={uploadedImages}
+            existingImages={existingImages}
+            deletedImageIndices={deletedImageIndices}
+            removeExistingImage={removeExistingImage}
             fileInputRef={fileInputRef}
             handleInputChange={handleInputChange}
             setFeaturesInput={setFeaturesInput}

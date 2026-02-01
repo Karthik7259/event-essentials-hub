@@ -59,9 +59,16 @@ export const AuthProvider = ({ children }) => {
       }
 
       localStorage.setItem('authToken', data.token);
+      localStorage.setItem('token', data.token); // Also store as 'token' for compatibility
+      localStorage.setItem('userId', data.user?._id || data.user?.id || '');
+      localStorage.setItem('userName', data.user?.name || email);
       setToken(data.token);
       setIsAuthenticated(true);
-      setUser({ email });
+      setUser({ 
+        id: data.user?._id || data.user?.id,
+        name: data.user?.name || email.split('@')[0],
+        email: data.user?.email || email
+      });
 
       return { success: true, message: 'Login successful' };
     } catch (err) {
@@ -92,9 +99,16 @@ export const AuthProvider = ({ children }) => {
       }
 
       localStorage.setItem('authToken', data.token);
+      localStorage.setItem('token', data.token); // Also store as 'token' for compatibility
+      localStorage.setItem('userId', data.user?._id || data.user?.id || '');
+      localStorage.setItem('userName', name);
       setToken(data.token);
       setIsAuthenticated(true);
-      setUser({ name, email });
+      setUser({ 
+        id: data.user?._id || data.user?.id,
+        name: name,
+        email: email
+      });
 
       return { success: true, message: 'Registration successful' };
     } catch (err) {
@@ -108,6 +122,9 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userName');
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
